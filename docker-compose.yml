@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: student-analytics-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - DATA_FILE=/app/data/Student_data.csv
+      - MODEL_DIR=/app/saved_models
+      - DATABASE_URI=sqlite:////app/db/student_data.db
+      - SECRET_KEY=comp258-neural-network-project-key
+    volumes:
+      - model_data:/app/saved_models
+      - db_data:/app/db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    container_name: student-analytics-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  model_data:
+  db_data:

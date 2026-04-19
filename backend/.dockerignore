@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+saved_models/
+student_data.db
+.env
+*.egg-info/
+dist/
+build/

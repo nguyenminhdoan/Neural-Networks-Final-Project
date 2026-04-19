@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(mkdir:*)",
+      "Bash(npx create-react-app:*)",
+      "Bash(npm install:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"import flask; import flask_cors; import flask_sqlalchemy; import tensorflow; import pandas; import sklearn; import joblib; print\\('All imports OK'\\)\")",
+      "Bash(timeout 180 python app.py)",
+      "Bash(npx react-scripts:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(docker compose:*)"
+    ]
+  }
+}

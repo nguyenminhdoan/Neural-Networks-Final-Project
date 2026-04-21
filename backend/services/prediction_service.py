@@ -6,8 +6,8 @@ import os
 import json
 import pandas as pd
 from models.neural_networks import (
-    PersistenceModel, GPAModel, AtRiskModel,
-    PERSISTENCE_FEATURES, GPA_FEATURES, AT_RISK_FEATURES,
+    PersistenceModel, GPAModel, AtRiskModel, StackedAcademicModel,
+    PERSISTENCE_FEATURES, GPA_FEATURES, AT_RISK_FEATURES, STACKED_FEATURES,
 )
 from database.db import db, PredictionLog
 from services.data_service import load_csv_data
@@ -22,6 +22,7 @@ class PredictionService:
         self.persistence_model = PersistenceModel(model_dir)
         self.gpa_model = GPAModel(model_dir)
         self.atrisk_model = AtRiskModel(model_dir)
+        self.stacked_model = StackedAcademicModel(model_dir)
         self._models_ready = False
 
     # ------------------------------------------------------------------
@@ -34,6 +35,7 @@ class PredictionService:
             self.persistence_model.load()
             self.gpa_model.load()
             self.atrisk_model.load()
+            self.stacked_model.load()
             self._models_ready = True
             print('[PredictionService] Models loaded from disk.')
         except Exception as e:
@@ -63,11 +65,17 @@ class PredictionService:
         self.atrisk_model.save()
         print(f'  -> accuracy={a_metrics["accuracy"]:.4f}  f1={a_metrics["f1_score"]:.4f}')
 
+        print('[PredictionService] Training stacked academic model ...')
+        s_metrics = self.stacked_model.train(df)
+        self.stacked_model.save()
+        print(f'  -> R2={s_metrics["r2_score"]:.4f}  MAE={s_metrics["mae"]:.4f}')
+
         self._models_ready = True
         return {
             'persistence': p_metrics,
             'gpa': g_metrics,
             'at_risk': a_metrics,
+            'stacked': s_metrics,
         }
 
     @property
@@ -96,6 +104,44 @@ class PredictionService:
         self._log('at_risk', input_dict, result)
         return result
 
+    def predict_stacked(self, input_dict):
+        """Stage-2 only: caller supplies both term GPAs."""
+        features = [float(input_dict[f]) for f in STACKED_FEATURES]
+        result = self.stacked_model.predict(features)
+        self._log('stacked', input_dict, result)
+        return result
+
+    def predict_pipeline(self, input_dict):
+        """
+        Full two-stage pipeline:
+          Stage 1: predict second-term GPA from first-term GPA + HS + demographics.
+          Stage 2: feed HS + 1st term GPA + predicted 2nd term GPA + demographics
+                   into the stacked regression to produce an academic score.
+          Also returns the persistence prediction using all of the above.
+        """
+        # Stage 1 - predict second-term GPA
+        stage1_input = [float(input_dict[f]) for f in GPA_FEATURES]
+        stage1 = self.gpa_model.predict(stage1_input)
+        predicted_second_gpa = stage1['predicted_gpa']
+
+        # Stage 2 - feed predicted 2nd term GPA into the stacked model
+        stage2_feed = dict(input_dict)
+        stage2_feed['second_term_gpa'] = predicted_second_gpa
+        stage2_input = [float(stage2_feed[f]) for f in STACKED_FEATURES]
+        stage2 = self.stacked_model.predict(stage2_input)
+
+        # Bonus: run the persistence classifier on the same augmented input
+        persistence_input = [float(stage2_feed[f]) for f in PERSISTENCE_FEATURES]
+        persistence = self.persistence_model.predict(persistence_input)
+
+        result = {
+            'stage1_predicted_second_term_gpa': predicted_second_gpa,
+            'stage2_academic_score': stage2['academic_score'],
+            'persistence_prediction': persistence,
+        }
+        self._log('pipeline', input_dict, result)
+        return result
+
     # ------------------------------------------------------------------
     # Metrics
     # ------------------------------------------------------------------
@@ -105,6 +151,7 @@ class PredictionService:
             'persistence': self.persistence_model.metrics,
             'gpa': self.gpa_model.metrics,
             'at_risk': self.atrisk_model.metrics,
+            'stacked': self.stacked_model.metrics,
             'models_ready': self._models_ready,
         }
 
@@ -113,6 +160,7 @@ class PredictionService:
             'persistence': PERSISTENCE_FEATURES,
             'gpa': GPA_FEATURES,
             'at_risk': AT_RISK_FEATURES,
+            'stacked': STACKED_FEATURES,
         }
 
     # ------------------------------------------------------------------

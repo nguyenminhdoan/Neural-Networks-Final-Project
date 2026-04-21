@@ -138,6 +138,28 @@ def predict_atrisk():
         return jsonify({'error': f'Invalid input: {e}'}), 400
 
 
+@predict_bp.route('/pipeline', methods=['POST'])
+def predict_pipeline():
+    """
+    Two-stage academic performance pipeline:
+      Stage 1 - regress second-term GPA from first-term GPA + HS + demographics
+      Stage 2 - regress overall academic score from HS + 1st GPA + 2nd GPA + demographics
+      Also returns a persistence probability.
+    """
+    if not prediction_service or not prediction_service.is_ready:
+        return jsonify({'error': 'Models not ready'}), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No input data provided'}), 400
+
+    try:
+        result = prediction_service.predict_pipeline(data)
+        return jsonify(result)
+    except (KeyError, ValueError) as e:
+        return jsonify({'error': f'Invalid input: {e}'}), 400
+
+
 # ======================================================================
 # Model Info Blueprint
 # ======================================================================

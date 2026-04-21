@@ -12,7 +12,17 @@
       "Bash(curl:*)",
       "Bash(python -m json.tool)",
       "Bash(taskkill //F //IM python.exe)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(python -c ' *)",
+      "Bash(rm -f \"D:/SCHOOL/Neural network/Final project/backend/saved_models/\"*.keras \"D:/SCHOOL/Neural network/Final project/backend/saved_models/\"*.pkl)",
+      "Bash(grep -v \"TensorFlow\\\\|oneDNN\\\\|dense.py\\\\|UserWarning\\\\|super\\\\|Loaded\\\\|Importing\\\\|Imported\\\\|Models loaded\\\\|training\\\\|^$\")",
+      "Bash(python ./models/neural_networks.py)",
+      "Bash(python -c \"import pptx; print\\('pptx', pptx.__version__\\)\")",
+      "Bash(python -c \"import matplotlib; print\\('mpl', matplotlib.__version__\\)\")",
+      "Bash(python -m pip install python-pptx --quiet)",
+      "Bash(python *)",
+      "Bash(git ls-tree *)",
+      "Bash(git add *)"
     ]
   }
 }
